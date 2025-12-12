@@ -1,0 +1,10 @@
+# Activar los colores de sintaxis (Syntax Highlighting)
+include /etc/nano/*.nanorc
+
+# Mostrar números de línea
+set linenumbers
+
+# Configurar indentación automática
+set autoindent
+set tabsize 4
+
