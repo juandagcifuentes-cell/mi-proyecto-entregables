@@ -1,0 +1,70 @@
+# --------------------------------------------------------------------------------
+# FASE 1: DEFINICIÓN DE LA IMAGEN BASE
+# --------------------------------------------------------------------------------
+
+# 1. Usamos la última versión de la distribución Fedora como imagen base.
+#    Fedora utiliza 'dnf' para la gestión de paquetes.
+FROM fedora:latest
+
+# Identificación: Etiqueta para indicar el mantenedor de la imagen.
+LABEL maintainer="grupo2"
+
+
+# --------------------------------------------------------------------------------
+# FASE 2: INSTALACIÓN DE HERRAMIENTAS DE DESARROLLO
+# --------------------------------------------------------------------------------
+
+# Usamos la instrucción RUN para instalar todo en una sola capa.
+# Esto es crucial para la eficiencia y para mantener la imagen pequeña.
+
+RUN dnf update -y && \
+# Primero, actualizamos la base de datos de paquetes ('dnf update -y').
+# El flag '-y' asegura que la instalación sea no-interactiva (automática).
+
+    dnf install -y \
+        vim nano emacs \
+        git curl wget \
+        gcc gcc-c++ make \
+    # Instalamos las aplicaciones requeridas:
+    # * Editores de texto (vim, nano, emacs)
+    # * Herramientas de desarrollo (git, curl, wget)
+    # * Compiladores y build tools (gcc, gcc-c++, make)
+    
+    && dnf clean all
+# 'dnf clean all' elimina el caché de los paquetes descargados, reduciendo significativamente
+# el tamaño final de la capa de la imagen. 
+
+
+# --------------------------------------------------------------------------------
+# FASE 3: CONFIGURACIÓN DE SEGURIDAD (USUARIO NO-ROOT)
+# --------------------------------------------------------------------------------
+
+# Definimos las variables para el nuevo usuario.
+ENV DEV_USER=developer \
+    DEV_UID=1000
+
+# 1. Creamos el grupo y el usuario 'developer'.
+#    -r: Indica usuario de sistema.
+#    -u $DEV_UID: Asigna el User ID 1000.
+#    -m: Crea automáticamente el directorio /home/developer.
+#    -s /bin/bash: Asigna la shell Bash.
+RUN groupadd -r $DEV_USER \
+    && useradd -r -u $DEV_UID -g $DEV_USER -m -s /bin/bash $DEV_USER
+
+# 2. Aseguramos que el nuevo usuario sea el dueño de su propio /home.
+RUN chown -R $DEV_USER:$DEV_USER /home/$DEV_USER
+
+# Establece el directorio de trabajo predeterminado para el nuevo usuario.
+WORKDIR /home/$DEV_USER
+
+# A partir de este punto, todas las instrucciones se ejecutarán como el usuario 'developer'.
+USER $DEV_USER
+
+
+# --------------------------------------------------------------------------------
+# FASE 4: COMANDO PREDETERMINADO
+# --------------------------------------------------------------------------------
+
+# El comando que se ejecuta cuando el contenedor se inicia en modo interactivo.
+# Abre la terminal Bash para que el usuario pueda empezar a trabajar.
+CMD ["/bin/bash"]
