@@ -1,0 +1,76 @@
+# --------------------------------------------------------------------------------
+# FASE 1: DEFINICIÓN DE LA IMAGEN BASE
+# --------------------------------------------------------------------------------
+FROM fedora:latest
+LABEL maintainer="grupo2"
+
+# Establecemos variables de entorno para la instalación y el path
+ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/developer/scripts"
+
+# Definición de variables de usuario
+ENV DEV_USER=developer \
+    DEV_UID=1000
+
+# --------------------------------------------------------------------------------
+# FASE 2: INSTALACIÓN DE HERRAMIENTAS Y APLICACIONES ADICIONALES (OPTIMIZADA)
+# --------------------------------------------------------------------------------
+
+# Instalamos las herramientas de desarrollo, las herramientas ofimáticas/utilidades
+# y preparamos los directorios de scripts, todo en una única instrucción RUN.
+
+RUN dnf update -y && \
+    
+    # Instalación de herramientas de desarrollo (gcc, git, vim, etc.)
+    dnf install -y \
+        vim nano emacs \
+        git curl wget \
+        gcc gcc-c++ make \
+    
+    # 🌟 NUEVA FUNCIONALIDAD: Herramientas Adicionales
+    # Instalamos 'pandoc' (conversor de documentos) y 'jq' (procesador de JSON)
+    # y 'python3' (para automatización y scripts).
+    pandoc jq python3 \
+    
+    # 🌟 PREPARACIÓN DE SCRIPTS
+    && mkdir -p /home/$DEV_USER/scripts && \
+    
+    # 🌟 OPTIMIZACIÓN Y LIMPIEZA
+    dnf clean all
+
+# --------------------------------------------------------------------------------
+# FASE 3: CONFIGURACIÓN DE SEGURIDAD Y USUARIO
+# --------------------------------------------------------------------------------
+
+# Creación del usuario 'developer' y asignación de grupo primario.
+RUN groupadd -r $DEV_USER \
+    && useradd -r -u $DEV_UID -g $DEV_USER -m -s /bin/bash $DEV_USER
+
+# Asegurar permisos y establecer el directorio de trabajo
+WORKDIR /home/$DEV_USER
+
+# El usuario 'developer' debe ser el dueño del directorio de scripts
+RUN chown -R $DEV_USER:$DEV_USER /home/$DEV_USER
+
+# A partir de aquí, todas las instrucciones se ejecutan como el usuario 'developer'.
+USER $DEV_USER
+
+
+# --------------------------------------------------------------------------------
+# FASE 4: AGREGAR SCRIPTS DE AUTOMATIZACIÓN
+# --------------------------------------------------------------------------------
+
+# 🌟 NUEVA FUNCIONALIDAD: Agregar Script de Automatización
+# Creamos un script simple llamado 'compilar.sh' que automatiza la compilación C.
+# El script se coloca en el directorio de scripts.
+RUN echo '#!/bin/bash' > /home/$DEV_USER/scripts/compilar.sh && \
+    echo 'echo "--- Iniciando compilación de $1 ---"' >> /home/$DEV_USER/scripts/compilar.sh && \
+    echo 'gcc -o a.out $1 -Wall' >> /home/$DEV_USER/scripts/compilar.sh && \
+    echo 'if [ $? -eq 0 ]; then echo "Compilación Exitosa. Ejecutando..."; ./a.out; fi' >> /home/$DEV_USER/scripts/compilar.sh && \
+    
+    # Hacemos el script ejecutable
+    chmod +x /home/$DEV_USER/scripts/compilar.sh
+
+# --------------------------------------------------------------------------------
+# FASE 5: COMANDO PREDETERMINADO
+# --------------------------------------------------------------------------------
+CMD ["/bin/bash"]
